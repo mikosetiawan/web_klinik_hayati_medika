@@ -4,10 +4,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HasilDiagnosaController;
 use App\Http\Controllers\KelolaDiagnosaController;
 use App\Http\Controllers\KelolaDokterController;
-use App\Http\Controllers\KelolaJadwalPraktikController;
 use App\Http\Controllers\KelolaObatController;
 use App\Http\Controllers\KelolaUsersController;
-use App\Http\Controllers\ListPendaftaranController;
 use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\PendaftaranPasienController;
 use App\Http\Controllers\ProfileController;
@@ -33,6 +31,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [PendaftaranPasienController::class, 'store'])->name('pendaftaran-pasien.store');
         Route::put('/{id}', [PendaftaranPasienController::class, 'update'])->name('pendaftaran-pasien.update');
         Route::delete('/{id}', [PendaftaranPasienController::class, 'destroy'])->name('pendaftaran-pasien.destroy');
+        Route::get('/queue-number/{id_dokter}', [PendaftaranPasienController::class, 'getQueueNumber'])->name('pendaftaran-pasien.queue-number');
     });
 
     // Hasil Diagnosa

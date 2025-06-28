@@ -57,17 +57,6 @@
       </li>
       @endif
 
-      <!-- Kelola Jadwal Praktik (accessible to admin and dokter) -->
-      @if (Auth::check() && in_array(Auth::user()->role, ['admin']))
-      <li class="nav-item">
-        <a class="nav-link {{ Request::routeIs('kelola-jadwal-praktik.*') ? 'active' : '' }}" href="{{ route('kelola-jadwal-praktik.index') }}">
-          <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-            <i class="bi bi-calendar-week-fill text-dark"></i>
-          </div>
-          <span class="nav-link-text ms-1">Kelola Jadwal Praktik</span>
-        </a>
-      </li>
-      @endif
 
       <!-- Kelola Obat (accessible to admin only) -->
       @if (Auth::check() && Auth::user()->role === 'admin')

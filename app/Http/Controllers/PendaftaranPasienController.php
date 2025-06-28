@@ -1,5 +1,4 @@
-<?php 
-
+<?php
 
 namespace App\Http\Controllers;
 
@@ -58,15 +57,135 @@ class PendaftaranPasienController extends Controller
             ]
         );
 
+        // Hitung nomor antrian berdasarkan dokter dan tanggal pendaftaran
+        $today = Carbon::today();
+        $count = PendaftaranPasien::where('id_dokter', $request->id_dokter)
+            ->where('tanggal_pendaftaran', $today)
+            ->count();
+        $no_antrian = 'P' . str_pad($count + 1, 3, '0', STR_PAD_LEFT) . '-' . $request->id_dokter . '-' . $today->format('Ymd');
+
         PendaftaranPasien::create([
-            'no_antrian' => PendaftaranPasien::generateNoBooking(),
+            'no_antrian' => $no_antrian,
             'id_dokter' => $request->id_dokter,
             'id_pasien' => $pasien->id,
-            'tanggal_pendaftaran' => Carbon::today(),
+            'tanggal_pendaftaran' => $today,
             'status' => 'booked',
         ]);
 
         return redirect()->route('pendaftaran-pasien.index')->with('success', 'Pendaftaran berhasil disimpan.');
+    }
+
+    /**
+     * Get queue number for any authenticated user (admin or patient)
+     * Fixed: Simplified authentication check and improved error handling
+     */
+    public function getQueueNumber($id_dokter)
+    {
+        try {
+            // Enhanced logging untuk debugging
+            Log::info('Queue number request started', [
+                'id_dokter' => $id_dokter,
+                'user_id' => Auth::id(),
+                'user_role' => Auth::user()->role ?? 'no_role',
+                'user_name' => Auth::user()->name ?? 'no_name',
+                'request_ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
+            // Validate if user is authenticated
+            if (!Auth::check()) {
+                Log::warning('Unauthorized access to queue number', [
+                    'id_dokter' => $id_dokter,
+                    'session_id' => session()->getId()
+                ]);
+                return response()->json(['error' => 'Akses tidak diizinkan'], 401);
+            }
+
+            // Convert id_dokter to integer for better validation
+            $id_dokter = (int) $id_dokter;
+
+            // Validate doctor exists
+            $dokter = Dokter::find($id_dokter);
+            if (!$dokter) {
+                Log::warning('Doctor not found', [
+                    'id_dokter' => $id_dokter,
+                    'user_id' => Auth::id()
+                ]);
+                return response()->json(['error' => 'Dokter tidak ditemukan'], 404);
+            }
+
+            // Get today's date
+            $today = Carbon::today();
+
+            // Count existing registrations for this doctor today dengan logging
+            $count = PendaftaranPasien::where('id_dokter', $id_dokter)
+                ->whereDate('tanggal_pendaftaran', $today)
+                ->count();
+
+            Log::info('Queue count calculated', [
+                'id_dokter' => $id_dokter,
+                'today' => $today->format('Y-m-d'),
+                'existing_count' => $count,
+                'user_id' => Auth::id(),
+                'user_role' => Auth::user()->role
+            ]);
+
+            // Generate queue number
+            $no_antrian = 'P' . str_pad($count + 1, 3, '0', STR_PAD_LEFT) . '-' . $id_dokter . '-' . $today->format('Ymd');
+
+            // Get doctor information
+            $dokter_info = [
+                'nama' => $dokter->nama,
+                'spesialisasi' => $dokter->spesialisasi,
+                'jam_praktek' => $dokter->jam_mulai . ' - ' . $dokter->jam_selesai,
+                'hari_praktek' => $dokter->hari_mulai . ' s/d ' . $dokter->hari_selesai
+            ];
+
+            Log::info('Queue number generated successfully', [
+                'id_dokter' => $id_dokter,
+                'user_id' => Auth::id(),
+                'user_role' => Auth::user()->role,
+                'no_antrian' => $no_antrian,
+                'queue_position' => $count + 1
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'no_antrian' => $no_antrian,
+                'current_queue' => $count + 1,
+                'dokter' => $dokter_info,
+                'tanggal' => $today->format('d M Y'),
+                'message' => 'Nomor antrian berhasil dibuat',
+                'debug_info' => [
+                    'user_role' => Auth::user()->role,
+                    'user_id' => Auth::id(),
+                    'count' => $count,
+                    'today' => $today->format('Y-m-d H:i:s'),
+                    'doctor_found' => true
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error in getQueueNumber', [
+                'id_dokter' => $id_dokter,
+                'user_id' => Auth::id(),
+                'user_role' => Auth::user()->role ?? 'unknown',
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Terjadi kesalahan server: ' . $e->getMessage(),
+                'debug_info' => [
+                    'user_role' => Auth::user()->role ?? 'unknown',
+                    'user_id' => Auth::id(),
+                    'error_location' => $e->getFile() . ':' . $e->getLine()
+                ]
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)
@@ -95,6 +214,13 @@ class PendaftaranPasienController extends Controller
 
             $pendaftaran->update(['status' => $request->status]);
 
+            Log::info('Registration status updated', [
+                'registration_id' => $id,
+                'old_status' => $pendaftaran->getOriginal('status'),
+                'new_status' => $request->status,
+                'updated_by' => Auth::id()
+            ]);
+
             return response()->json([
                 'success' => 'Status pendaftaran berhasil diperbarui.',
                 'status' => $request->status,
@@ -109,6 +235,13 @@ class PendaftaranPasienController extends Controller
     {
         try {
             $pendaftaran = PendaftaranPasien::findOrFail($id);
+
+            Log::info('Registration deleted', [
+                'registration_id' => $id,
+                'no_antrian' => $pendaftaran->no_antrian,
+                'deleted_by' => Auth::id()
+            ]);
+
             $pendaftaran->delete();
 
             return response()->json(['success' => 'Pendaftaran berhasil dihapus.']);
@@ -116,19 +249,5 @@ class PendaftaranPasienController extends Controller
             Log::error('Delete error', ['id' => $id, 'error' => $e->getMessage()]);
             return response()->json(['error' => 'Gagal menghapus data: ' . $e->getMessage()], 500);
         }
-    }
-
-    public function getQueueInfo($id_dokter)
-    {
-        $count = PendaftaranPasien::where('id_dokter', $id_dokter)
-            ->where('tanggal_pendaftaran', Carbon::today())
-            ->count();
-        $no_antrian = $count + 1;
-        $estimasi_waktu = $no_antrian * 15; // Misalnya, setiap pasien 15 menit
-
-        return response()->json([
-            'no_antrian' => $no_antrian,
-            'estimasi_waktu' => $estimasi_waktu,
-        ]);
     }
 }
