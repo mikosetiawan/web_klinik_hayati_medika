@@ -1,17 +1,13 @@
 <?php
 
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Dokter extends Model
 {
-    protected $fillable = ['id_user', 'nama', 'spesialisasi', 'no_telepon'];
-
-    public function jadwalPraktiks()
-    {
-        return $this->hasMany(JadwalPraktik::class, 'id_dokter');
-    }
+    protected $fillable = ['id_user', 'nama', 'spesialisasi', 'no_telepon', 'jam_mulai', 'jam_selesai', 'hari_mulai', 'hari_selesai'];
 
     public function user()
     {

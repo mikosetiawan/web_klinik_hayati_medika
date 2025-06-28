@@ -33,8 +33,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [PendaftaranPasienController::class, 'store'])->name('pendaftaran-pasien.store');
         Route::put('/{id}', [PendaftaranPasienController::class, 'update'])->name('pendaftaran-pasien.update');
         Route::delete('/{id}', [PendaftaranPasienController::class, 'destroy'])->name('pendaftaran-pasien.destroy');
-        Route::get('/jadwal/{id_dokter}', [PendaftaranPasienController::class, 'getJadwal'])->name('pendaftaran-pasien.jadwal');
-        Route::get('/queue-info/{id_jadwal_praktik}', [PendaftaranPasienController::class, 'getQueueInfo'])->name('pendaftaran-pasien.queue-info');
     });
 
     // Hasil Diagnosa
@@ -59,14 +57,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [KelolaDokterController::class, 'store'])->name('kelola-dokter.store');
         Route::put('/{id}', [KelolaDokterController::class, 'update'])->name('kelola-dokter.update');
         Route::delete('/{id}', [KelolaDokterController::class, 'destroy'])->name('kelola-dokter.destroy');
-    });
-
-    // Kelola Jadwal Praktik
-    Route::prefix('kelola-jadwal-praktik')->group(function () {
-        Route::get('/', [KelolaJadwalPraktikController::class, 'index'])->name('kelola-jadwal-praktik.index');
-        Route::post('/', [KelolaJadwalPraktikController::class, 'store'])->name('kelola-jadwal-praktik.store');
-        Route::put('/{id}', [KelolaJadwalPraktikController::class, 'update'])->name('kelola-jadwal-praktik.update');
-        Route::delete('/{id}', [KelolaJadwalPraktikController::class, 'destroy'])->name('kelola-jadwal-praktik.destroy');
     });
 
     // Kelola Obat

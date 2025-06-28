@@ -12,8 +12,12 @@ class CreateDoktersTable extends Migration
             $table->id();
             $table->foreignId('id_user')->constrained('users')->onDelete('cascade');
             $table->string('nama');
-            $table->string('spesialisasi');
+            $table->string('spesialisasi')->default('Dokter Umum');
             $table->string('no_telepon');
+            $table->time('jam_mulai');
+            $table->time('jam_selesai');
+            $table->string('hari_mulai');
+            $table->string('hari_selesai');
             $table->timestamps();
         });
     }
